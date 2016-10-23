@@ -5,3 +5,4 @@ authors = ["Erik Mossberg <ClicketyClack@users.noreply.github.com>"]
 
 [dependencies]
 piston_window = "*"
+portaudio = "*"
