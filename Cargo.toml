@@ -1,0 +1,7 @@
+[package]
+name = "hertzery"
+version = "0.1.0"
+authors = ["Erik Mossberg <ClicketyClack@users.noreply.github.com>"]
+
+[dependencies]
+piston_window = "*"
