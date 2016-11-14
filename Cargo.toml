@@ -7,3 +7,4 @@ authors = ["Erik Mossberg <clicketyclack@users.noreply.github.com>"]
 piston_window = "*"
 portaudio = "*"
 pistoncore-sdl2_window = "*"
+time = "*"

@@ -1,7 +1,7 @@
 extern crate piston_window;
 extern crate sdl2_window;
 extern crate portaudio;
-
+extern crate time;
 
 
 
@@ -14,6 +14,7 @@ mod hertzery {
     use std;
     use portaudio;
     use portaudio as pa;
+    use time;
     
     use piston_window::{PistonWindow, WindowSettings, OpenGL};
     use sdl2_window::Sdl2Window;
@@ -54,22 +55,30 @@ mod hertzery {
 
     struct IOSettings<'a> {
         sample_rate: f64,
-        pa_settings: portaudio::stream::DuplexSettings<f32, i32>,
+        pa_settings: portaudio::stream::DuplexSettings<f32, f32>,
         pa_handle: &'a portaudio::PortAudio,
+        chunk_size: u32,
+        is_interleaved: bool,
+        input_device : portaudio::DeviceIndex,
+        output_device : portaudio::DeviceIndex,
     }
 
     impl<'a> IOSettings<'a> {
         fn quickstart(pa: &portaudio::PortAudio) -> IOSettings {
 
+            IOSettings::print_devices(pa);
+
             let sample_rate = 48000.0;
             let chunk_size = 2048; // Gives ~ 43ms chunks
-
+            let is_interleaved = true;
             let einfo = ExtractedInfo::new(&pa);
+            let input_device = einfo.def_input;
+            let output_device = einfo.def_output;
 
             let input_params =
-                pa::StreamParameters::<f32>::new(einfo.def_input, 1, true, einfo.input_latency);
+                pa::StreamParameters::<f32>::new(input_device, 1, is_interleaved, einfo.input_latency);
             let output_params =
-                pa::StreamParameters::new(einfo.def_output, 2, true, einfo.output_latency);
+                pa::StreamParameters::new(output_device, 2, is_interleaved, einfo.output_latency);
                 
             let settings =
                 pa::DuplexStreamSettings::new(input_params, output_params, sample_rate, chunk_size);
@@ -78,6 +87,22 @@ mod hertzery {
                 sample_rate: sample_rate,
                 pa_settings: settings,
                 pa_handle: &pa,
+                chunk_size : chunk_size,
+                is_interleaved : is_interleaved,
+                input_device : input_device,
+                output_device : output_device,
+            }
+        }
+        
+        fn print_devices(pa: &portaudio::PortAudio) -> () {
+            if let Ok(mut iter) = pa.devices() {
+                while let Some(d) = iter.next() {
+                    let dinfo = d.unwrap();
+                    let idx = dinfo.0;
+                    let name = dinfo.1.name;
+                    println!("Found device {:?}, {}", idx, name);
+                    
+                }
             }
         }
     }
@@ -86,7 +111,7 @@ mod hertzery {
 
     struct RecordingPath<'a> {
         settings: IOSettings<'a>,
-        stream: portaudio::Stream<portaudio::NonBlocking, portaudio::Duplex<f32, i32>>,
+        stream: portaudio::Stream<portaudio::NonBlocking, portaudio::Duplex<f32, f32>>,
     }
 
 
@@ -107,25 +132,35 @@ mod hertzery {
         fn open_channel
             (settings: &IOSettings,
              pa: &portaudio::PortAudio)
-             -> portaudio::Stream<portaudio::NonBlocking, portaudio::Duplex<f32, i32>> {
+             -> portaudio::Stream<portaudio::NonBlocking, portaudio::Duplex<f32, f32>> {
+                 
+            // Safeguard: stop stream after 3 seconds, as we don't have stopping control over it yet.      
+            let deadline = time::get_time() + time::Duration::seconds(5);      
             let callback = move |pa::DuplexStreamCallbackArgs { in_buffer,
                                                                 out_buffer,
                                                                 frames,
                                                                 flags,
                                                                 time }| {
 
-
-                let mut volume = 0;
+                let mut volume = 0.0f32;
 
                 for n in 0..frames {
-                    volume += (in_buffer[n] as i32).abs();
-                    out_buffer[n] = n as i32; // in_buffer[n] as i32;
-
+                    let duration = 2048.0 / 48000.0;
+                    volume += (in_buffer[n] as f32).abs();
+                    let f = 440.0;
+                    let t = duration * ((n as f32) / 2048.0);
+                    let amplitude = 0.1;
+                    out_buffer[n] = amplitude * (f * t * 2.0 * std::f32::consts::PI).sin(); // in_buffer[n] as f32;
                 }
 
-                println!("Got {} volume units over {} frames.", volume, frames);
+                let time_left = deadline - time::get_time();
+                println!("Got {} volume units over {} frames. Some frames are {}, {}. {} left.", volume, frames, in_buffer[4], in_buffer[6], time_left);
 
-                pa::Continue
+                if (time::get_time() < deadline) {
+                    pa::Continue
+                } else {
+                    pa::Complete
+                }
             };
 
             let stream = pa.open_non_blocking_stream(settings.pa_settings, callback).unwrap();
@@ -137,37 +172,40 @@ mod hertzery {
 
 
         use portaudio;
-        use piston_window::{clear, rectangle, OpenGL};
+        use piston_window::{clear, rectangle, Window};
 
         let pa = portaudio::PortAudio::new().unwrap();
         let mut rp = RecordingPath::new(&pa);
         
-        //let in_dev_nr = rp.settings.pa_settings.in_params.device;
-        let device_info = pa.device_info(pa::DeviceIndex(0)).unwrap();
-        //print!("{}", device_info.name);
-
+        let device = rp.settings.input_device;
+        let device_info = pa.device_info(device).unwrap();
+        
         try!(rp.stream.start());
 
-        //let title = format!("Portaudio version {:?}", pa.version_text());
         let title = format!("{}", device_info.name);
+        
         let mut window: PistonWindow<Sdl2Window> = WindowSettings::new(title, (640, 480))
-                                                        .exit_on_esc(true)
                                                         .build()
                                                         .unwrap_or_else(|e| { panic!("Failed to build PistonWindow: {}", e) });
         
-        while let Some(e) = window.next() {
-                        window.draw_2d(&e, |c, g| {
-                            clear([0.5, 0.5, 0.5, 1.0], g);
-                            rectangle([1.0, 0.0, 0.0, 1.0], // red
-                                      [0.0, 0.0, 100.0, 100.0], // rectangle
-                                      c.transform,
-                                      g);
-                    });
-        }
-    
-        
+            
         // While stream is running, idle.
         while let true = try!(rp.stream.is_active()) {
+		
+    		if let Some(e) = window.poll_event() {
+                            window.draw_2d(&e, |c, g| {
+                                clear([0.5, 0.5, 0.5, 1.0], g);
+                                rectangle([1.0, 0.0, 0.0, 1.0], // red
+                                          [0.0, 0.0, 100.0, 100.0], // rectangle
+                                          c.transform,
+                                          g);
+                            });
+                            window.swap_buffers();
+                            
+                            println!("Draw event!");
+                            
+    		}
+    		
             std::thread::sleep(std::time::Duration::from_millis(16));
             
         }
