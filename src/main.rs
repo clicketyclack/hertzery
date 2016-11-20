@@ -9,6 +9,7 @@ extern crate time;
 
 pub mod dsp_waveforms;
 pub mod audiodev_config;
+pub mod ui;
 
 fn main() {
     hertzery::main();
@@ -22,6 +23,7 @@ mod hertzery {
     use time;
     use audiodev_config::*;
     use dsp_waveforms;
+    use ui;
     
     pub fn main() {
         run().unwrap()
@@ -120,7 +122,10 @@ mod hertzery {
                                                         .build()
                                                         .unwrap_or_else(|e| { panic!("Failed to build PistonWindow: {}", e) });
         
-        */  
+        */
+        
+        ui::start_ui();
+          
         // While stream is running, idle.
         while let true = try!(rp.stream.is_active()) {
     		/*

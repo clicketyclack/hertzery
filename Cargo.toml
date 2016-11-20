@@ -6,3 +6,4 @@ authors = ["Erik Mossberg <clicketyclack@users.noreply.github.com>"]
 [dependencies]
 portaudio = "*"
 time = "*"
+gtk = "*"
