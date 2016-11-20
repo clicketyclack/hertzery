@@ -81,17 +81,17 @@ pub struct WaveFormCache {
 
 
 impl WaveFormCache {
-    fn new() -> WaveFormCache {
+    pub fn new() -> WaveFormCache {
         let m : HashMap<[u32;2], Vec<f32>> = HashMap::new();
         //let mut waveforms = DSPWindow::new();
     
         WaveFormCache { waveforms : m }    
     }
     
-    fn get_sine(&self, period : usize, length : usize) -> Vec<f32> {
+    pub fn get_sine(&self, period : f32, length : usize) -> Vec<f32> {
         let mut toreturn : Vec<f32> = vec![0.0f32;length];
         for n in 0..length {
-            let t = 2.0 * f32::consts::PI * (((n as f32)/(period as f32)) % 1.0); 
+            let t = 2.0 * f32::consts::PI * (((n as f32)/(period)) % 1.0); 
             toreturn[n] = t.sin();
         }       
         
@@ -146,8 +146,8 @@ fn gen_hamming() {
 fn gen_sine_16() {
     // Test simple block of 16-periodic sin function.
     let wfc = WaveFormCache::new();
-    let sin16_16 = wfc.get_sine(16, 16);
-    let sin16_17 = wfc.get_sine(16, 17);
+    let sin16_16 = wfc.get_sine(16.0, 16);
+    let sin16_17 = wfc.get_sine(16.0, 17);
     
     //for n in 0..sin16_16.len() {
     //    println!("{} {} {}", n, sin16_16[n], sin16_17[n]);
