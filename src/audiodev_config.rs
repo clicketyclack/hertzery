@@ -15,9 +15,11 @@ pub struct ExtractedInfo<'a> {
 
 impl<'a> ExtractedInfo<'a> {
     pub fn new(pa: &portaudio::PortAudio) -> ExtractedInfo {
-        let def_input = pa.default_input_device().unwrap();
-        let def_output = pa.default_output_device().unwrap();
-
+        //let def_input = pa.default_input_device().unwrap();
+        let def_input = portaudio::DeviceIndex(0);
+        //let def_output = pa.default_output_device().unwrap();
+        let def_output = portaudio::DeviceIndex(1);
+        
         let input_info = pa.device_info(def_input).unwrap();
         let output_info = pa.device_info(def_output).unwrap();
 
@@ -53,7 +55,7 @@ impl<'a> IOSettings<'a> {
         IOSettings::print_devices(pa);
 
         let sample_rate = 48000.0;
-        let chunk_size = 2048; // Gives ~ 43ms chunks
+        let chunk_size = 2048; // 2k gives ~ 43ms chunks
         let is_interleaved = true;
         let einfo = ExtractedInfo::new(&pa);
         let input_device = einfo.def_input;
@@ -62,7 +64,10 @@ impl<'a> IOSettings<'a> {
         let input_params =
             pa::StreamParameters::<f32>::new(input_device, 1, is_interleaved, einfo.input_latency);
         let output_params =
-            pa::StreamParameters::new(output_device, 2, is_interleaved, einfo.output_latency);
+            pa::StreamParameters::new(output_device, 1, is_interleaved, einfo.output_latency);
+
+
+        println!("Using input device {:?}, output device {:?}", input_device, output_device);
 
         let settings =
             pa::DuplexStreamSettings::new(input_params, output_params, sample_rate, chunk_size);
