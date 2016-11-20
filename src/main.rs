@@ -21,7 +21,7 @@ mod hertzery {
     use portaudio as pa;
     use time;
     use audiodev_config::*;
-
+    use dsp_waveforms;
     
     pub fn main() {
         run().unwrap()
@@ -54,27 +54,39 @@ mod hertzery {
              -> portaudio::Stream<portaudio::NonBlocking, portaudio::Duplex<f32, f32>> {
                  
             // Safeguard: stop stream after 3 seconds, as we don't have stopping control over it yet.      
-            let deadline = time::get_time() + time::Duration::seconds(5);      
+            let deadline = time::get_time() + time::Duration::seconds(5);
+                  
+            let wfc = dsp_waveforms::WaveFormCache::new();
+            
+            // Alternate between a few frequencies.
+            let waveform1 = wfc.get_sine(2048.0/16.0, 2048);
+            let waveform2 = wfc.get_sine(2048.0/12.0, 2048);
+
             let callback = move |pa::DuplexStreamCallbackArgs { in_buffer,
                                                                 out_buffer,
                                                                 frames,
                                                                 flags,
                                                                 time }| {
-
+                let start_time = time::get_time();
                 let mut volume = 0.0f32;
+                let amplitude = 0.1;
 
                 for n in 0..frames {
-                    let duration = 2048.0 / 48000.0;
+                    let t = ((3.141516*2.0)*(n as f32)/(frames as f32)).sin();
+                    let a1 = 0.5 + 0.5 * amplitude * t;
+                    let a2 = amplitude * (1.0-a1);
+                    
                     volume += (in_buffer[n] as f32).abs();
-                    let f = 440.0;
-                    let t = duration * ((n as f32) / 2048.0);
-                    let amplitude = 0.1;
-                    out_buffer[n] = amplitude * (f * t * 2.0 * std::f32::consts::PI).sin(); // in_buffer[n] as f32;
+                    
+                    out_buffer[n] = a1 * waveform1[n] + a2 * waveform2[n];
                 }
+                
+                let avg_volume_db = dsp_waveforms::ampl2dbfs(volume / (frames as f32));
 
                 let time_left = deadline - time::get_time();
-                println!("Got {} volume units over {} frames. Some frames are {}, {}. {} left.", volume, frames, in_buffer[4], in_buffer[6], time_left);
-
+                let taken_time = time::get_time() - start_time;
+                println!("Got {} volume units over {} frames. Some frames are {}, {}. {} left. Callback took {}.", avg_volume_db, frames, in_buffer[4], in_buffer[6], time_left, taken_time);
+                
                 if (time::get_time() < deadline) {
                     pa::Continue
                 } else {
