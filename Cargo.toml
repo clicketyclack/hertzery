@@ -4,7 +4,5 @@ version = "0.0.1"
 authors = ["Erik Mossberg <clicketyclack@users.noreply.github.com>"]
 
 [dependencies]
-piston_window = "*"
 portaudio = "*"
-pistoncore-sdl2_window = "*"
 time = "*"

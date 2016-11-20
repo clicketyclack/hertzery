@@ -4,8 +4,6 @@ Hertzery. A mod.
 */
 
 
-extern crate piston_window;
-extern crate sdl2_window;
 extern crate portaudio;
 extern crate time;
 
@@ -23,9 +21,6 @@ mod hertzery {
     use portaudio as pa;
     use time;
     use audiodev_config::*;
-    
-    use piston_window::{PistonWindow, WindowSettings, OpenGL};
-    use sdl2_window::Sdl2Window;
 
     
     pub fn main() {
@@ -98,8 +93,7 @@ mod hertzery {
 
 
         use portaudio;
-        use piston_window::{clear, rectangle, Window};
-
+        
         let pa = portaudio::PortAudio::new().unwrap();
         let mut rp = RecordingPath::new(&pa);
         
@@ -109,15 +103,15 @@ mod hertzery {
         try!(rp.stream.start());
 
         let title = format!("{}", device_info.name);
-        
+        /*
         let mut window: PistonWindow<Sdl2Window> = WindowSettings::new(title, (640, 480))
                                                         .build()
                                                         .unwrap_or_else(|e| { panic!("Failed to build PistonWindow: {}", e) });
         
-            
+        */  
         // While stream is running, idle.
         while let true = try!(rp.stream.is_active()) {
-		
+    		/*
     		if let Some(e) = window.poll_event() {
                             window.draw_2d(&e, |c, g| {
                                 clear([0.5, 0.5, 0.5, 1.0], g);
@@ -131,7 +125,7 @@ mod hertzery {
                             println!("Draw event!");
                             
     		}
-    		
+    		*/
             std::thread::sleep(std::time::Duration::from_millis(16));
             
         }
