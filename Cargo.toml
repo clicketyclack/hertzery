@@ -8,6 +8,7 @@ portaudio = "*"
 time = "*"
 gtk = "*"
 gdk = "*"
+cairo = "*"
 
 [features]
 default = ["gtk/v3_10"]

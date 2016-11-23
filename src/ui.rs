@@ -2,6 +2,7 @@
 
 extern crate gtk;
 extern crate gdk;
+extern crate cairo;
 
 
 pub fn start_ui() {
@@ -10,6 +11,7 @@ pub fn start_ui() {
     use self::gtk::prelude::*;
     use self::gtk;
     use self::gdk;
+    use self::cairo;    
     use self::gtk::{Builder, Button, MessageDialog, Window};
 
     if gtk::init().is_err() {
@@ -29,6 +31,22 @@ pub fn start_ui() {
         return;
         }
     };
+    
+    let drawing_area: gtk::DrawingArea = builder.get_object("hz_tuner_drawing").unwrap();
+
+    drawing_area.connect_draw(move |widget, cairo_context| {
+            cairo_context.set_source_rgb(0.9,0.4,0.1);
+            cairo_context.rectangle(20.3,20.3,155.5,155.5);
+            cairo_context.fill();
+
+            cairo_context.set_source_rgb(0.3,0.3,0.8);
+            cairo_context.arc(120.1,70.6,65.7, 0.1, 10.9);
+            cairo_context.fill();
+        
+            Inhibit(false)
+        });
+
+    top_window.set_default_size(800,600);    
 
     top_window.connect_delete_event(|_, _| {
         gtk::main_quit();
