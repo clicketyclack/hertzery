@@ -7,3 +7,7 @@ authors = ["Erik Mossberg <clicketyclack@users.noreply.github.com>"]
 portaudio = "*"
 time = "*"
 gtk = "*"
+gdk = "*"
+
+[features]
+default = ["gtk/v3_10"]
