@@ -1,12 +1,15 @@
 
 
 extern crate gtk;
+extern crate gdk;
+
 
 pub fn start_ui() {
     
     use std::fs::OpenOptions;
-    use self::gtk;
     use self::gtk::prelude::*;
+    use self::gtk;
+    use self::gdk;
     use self::gtk::{Builder, Button, MessageDialog, Window};
 
     if gtk::init().is_err() {
@@ -15,28 +18,24 @@ pub fn start_ui() {
     }
 
 
-    let f = OpenOptions::new().read(true).open("builder_basics.glade", "r");
-    let glade_src = f.read();
-    f.close();
-
-    // let glade_src = include_str!("builder_basics.glade");
+    let glade_src = include_str!("hertzery.glade");
     let builder = Builder::new_from_string(glade_src);
 
-    let window: Window = builder.get_object("window1").unwrap();
-    let bigbutton: Button = builder.get_object("button1").unwrap();
-    let dialog: MessageDialog = builder.get_object("messagedialog1").unwrap();
+    let hz_window_main: Option<gtk::Window> = builder.get_object("hz_window_main");
+    let top_window = match hz_window_main {  
+        Some(window) =>  window, 
+        None => {
+        println!("Could not get 'hz_window_main' from glade builder.");
+        return;
+        }
+    };
 
-    window.connect_delete_event(|_, _| {
+    top_window.connect_delete_event(|_, _| {
         gtk::main_quit();
         Inhibit(false)
     });
-
-    bigbutton.connect_clicked(move |_| {
-        dialog.run();
-        dialog.hide();
-    });
-
-    window.show_all();
+    
+    top_window.show_all();
 
     gtk::main();
 }
