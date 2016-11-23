@@ -10,6 +10,7 @@ extern crate time;
 pub mod dsp_waveforms;
 pub mod audiodev_config;
 pub mod ui;
+pub mod program;
 
 fn main() {
     hertzery::main();
@@ -24,6 +25,7 @@ mod hertzery {
     use audiodev_config::*;
     use dsp_waveforms;
     use ui;
+    use program::ReportGlobals;
     
     pub fn main() {
         run().unwrap()
@@ -38,11 +40,11 @@ mod hertzery {
 
 
     impl<'a> RecordingPath<'a> {
-        fn new(pa: &portaudio::PortAudio) -> RecordingPath {
+        fn new(pa: &'a portaudio::PortAudio, report_globals : &'a ReportGlobals) -> RecordingPath<'a> {
             // Return a recording path with an input stream.
             let settings = IOSettings::quickstart(pa);
 
-            let stream = RecordingPath::open_channel(&settings, &pa);
+            let stream = RecordingPath::open_channel(&settings, &pa, report_globals);
             RecordingPath {
                 settings: settings,
                 stream: stream,
@@ -52,17 +54,19 @@ mod hertzery {
 
         fn open_channel
             (settings: &IOSettings,
-             pa: &portaudio::PortAudio)
+                pa: &portaudio::PortAudio,
+                report_globals : &ReportGlobals)
              -> portaudio::Stream<portaudio::NonBlocking, portaudio::Duplex<f32, f32>> {
                  
             // Safeguard: stop stream after 3 seconds, as we don't have stopping control over it yet.      
-            let deadline = time::get_time() + time::Duration::seconds(5);
+            let deadline = time::get_time() + time::Duration::seconds(6786575);
                   
             let wfc = dsp_waveforms::WaveFormCache::new();
             
             // Alternate between a few frequencies.
             let waveform1 = wfc.get_sine(2048.0/16.0, 2048);
             let waveform2 = wfc.get_sine(2048.0/12.0, 2048);
+            let rg = report_globals.current_volume.clone();
 
             let callback = move |pa::DuplexStreamCallbackArgs { in_buffer,
                                                                 out_buffer,
@@ -84,6 +88,9 @@ mod hertzery {
                 }
                 
                 let avg_volume_db = dsp_waveforms::ampl2dbfs(volume / (frames as f32));
+                
+                let mut data = rg.lock().unwrap();
+                *data = avg_volume_db;                
 
                 let time_left = deadline - time::get_time();
                 let taken_time = time::get_time() - start_time;
@@ -108,8 +115,10 @@ mod hertzery {
 
         use portaudio;
         
+        let mut rg : ReportGlobals = ReportGlobals::new();
+        
         let pa = portaudio::PortAudio::new().unwrap();
-        let mut rp = RecordingPath::new(&pa);
+        let mut rp = RecordingPath::new(&pa, &rg);
         
         let device = rp.settings.input_device;
         let device_info = pa.device_info(device).unwrap();
@@ -124,7 +133,7 @@ mod hertzery {
         
         */
         
-        ui::start_ui();
+        ui::start_ui(&rg);
           
         // While stream is running, idle.
         while let true = try!(rp.stream.is_active()) {
