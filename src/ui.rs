@@ -1,13 +1,13 @@
 
 
-
+extern crate gtk;
 
 pub fn start_ui() {
-    extern crate gtk;
+    
     use std::fs::OpenOptions;
-    use gtk;
-    use gtk::prelude::*;
-    use gtk::{Builder, Button, MessageDialog, Window};
+    use self::gtk;
+    use self::gtk::prelude::*;
+    use self::gtk::{Builder, Button, MessageDialog, Window};
 
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
